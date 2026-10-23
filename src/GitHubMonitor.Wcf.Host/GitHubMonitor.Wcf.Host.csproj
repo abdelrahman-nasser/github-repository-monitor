@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CoreWCF.Http" Version="1.9.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GitHubMonitor.Wcf.Contracts\GitHubMonitor.Wcf.Contracts.csproj" />
+    <ProjectReference Include="..\GitHubMonitor.Application\GitHubMonitor.Application.csproj" />
+    <ProjectReference Include="..\GitHubMonitor.Infrastructure\GitHubMonitor.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
