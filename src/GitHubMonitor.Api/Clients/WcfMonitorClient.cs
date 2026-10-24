@@ -2,7 +2,7 @@
 
 namespace GitHubMonitor.Api.Clients;
 
-public sealed class WcfMonitorClient
+public sealed class WcfMonitorClient : IWcfMonitorClient
 {
     private readonly IConfiguration _configuration;
 
@@ -11,7 +11,8 @@ public sealed class WcfMonitorClient
         _configuration = configuration;
     }
 
-    public string Ping()
+    public async Task<string> PingAsync(
+        CancellationToken cancellationToken = default)
     {
         var url = _configuration["Wcf:EndpointUrl"]
             ?? throw new InvalidOperationException(
@@ -21,33 +22,66 @@ public sealed class WcfMonitorClient
         {
             OpenTimeout = TimeSpan.FromSeconds(5),
             SendTimeout = TimeSpan.FromSeconds(10),
-            ReceiveTimeout = TimeSpan.FromSeconds(10)
+            CloseTimeout = TimeSpan.FromSeconds(5)
         };
 
-        var endpoint = new EndpointAddress(url);
-
         var factory = new ChannelFactory<IGitHubMonitorSoapClient>(
-            binding, endpoint);
+            binding,
+            new EndpointAddress(url));
 
         IClientChannel? channel = null;
+        var completed = false;
 
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var client = factory.CreateChannel();
             channel = (IClientChannel)client;
 
-            var result = client.Ping();
+            var result = await client.PingAsync()
+                .WaitAsync(cancellationToken);
 
-            channel.Close();
-            factory.Close();
-
+            completed = true;
             return result;
         }
-        catch
+        finally
         {
-            channel?.Abort();
-            factory.Abort();
-            throw;
+            if (completed)
+            {
+                CloseOrAbort(channel);
+                CloseOrAbort(factory);
+            }
+            else
+            {
+                channel?.Abort();
+                factory.Abort();
+            }
+        }
+    }
+
+    private static void CloseOrAbort(ICommunicationObject? resource)
+    {
+        if (resource is null)
+            return;
+
+        try
+        {
+            if (resource.State == CommunicationState.Faulted)
+            {
+                resource.Abort();
+                return;
+            }
+
+            resource.Close();
+        }
+        catch (CommunicationException)
+        {
+            resource.Abort();
+        }
+        catch (TimeoutException)
+        {
+            resource.Abort();
         }
     }
 }

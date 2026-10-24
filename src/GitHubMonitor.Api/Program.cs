@@ -1,37 +1,48 @@
 using GitHubMonitor.Api.Clients;
+using GitHubMonitor.Api.ExceptionHandling;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Services
+// API documentation
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddTransient<WcfMonitorClient>();
+// WCF SOAP client
+builder.Services.AddTransient<IWcfMonitorClient, WcfMonitorClient>();
+
+// Global exception handling
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
-// Middleware
+// Exception handling middleware
+app.UseExceptionHandler();
+
+// Swagger (Development only)
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+// HTTPS redirection
 app.UseHttpsRedirection();
 
-// Endpoints
-app.MapGet("/api/diagnostics/wcf", (WcfMonitorClient client) =>
-{
-    var result = client.Ping();
-
-    return Results.Ok(new
+// Temporary WCF connectivity test
+app.MapGet("/api/diagnostics/wcf",
+    async (IWcfMonitorClient client, CancellationToken cancellationToken) =>
     {
-        success = true,
-        message = "WCF connection successful",
-        data = result
-    });
-})
-.WithName("CheckWcfConnection")
-.WithOpenApi();
+        var result = await client.PingAsync(cancellationToken);
+
+        return Results.Ok(new
+        {
+            success = true,
+            message = "WCF connection successful",
+            data = result
+        });
+    })
+    .WithName("CheckWcfConnection")
+    .WithOpenApi();
 
 app.Run();

@@ -8,7 +8,8 @@ namespace GitHubMonitor.Api.Clients;
 public interface IGitHubMonitorSoapClient
 {
     [OperationContract(
+        Name = "Ping",
         Action = "http://tempuri.org/IGitHubMonitorService/Ping",
         ReplyAction = "*")]
-    string Ping();
+    Task<string> PingAsync();
 }
