@@ -1,4 +1,4 @@
-﻿namespace GitHubMonitor.Api.Clients;
+namespace GitHubMonitor.Api.Clients;
 
 public interface IWcfMonitorClient
 {

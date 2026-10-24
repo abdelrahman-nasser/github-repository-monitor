@@ -1,4 +1,4 @@
-﻿using GitHubMonitor.Wcf.Contracts;
+using GitHubMonitor.Wcf.Contracts;
 
 namespace GitHubMonitor.Wcf.Host.Services;
 

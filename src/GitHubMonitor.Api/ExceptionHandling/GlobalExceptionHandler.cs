@@ -1,4 +1,4 @@
-﻿using System.ServiceModel;
+using System.ServiceModel;
 using Microsoft.AspNetCore.Diagnostics;
 
 namespace GitHubMonitor.Api.ExceptionHandling;

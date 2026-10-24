@@ -1,22 +1,22 @@
-﻿using System.ServiceModel;
+using System.ServiceModel;
+using GitHubMonitor.Api.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace GitHubMonitor.Api.Clients;
 
 public sealed class WcfMonitorClient : IWcfMonitorClient
 {
-    private readonly IConfiguration _configuration;
+    private readonly WcfOptions _options;
 
-    public WcfMonitorClient(IConfiguration configuration)
+    public WcfMonitorClient(IOptions<WcfOptions> options)
     {
-        _configuration = configuration;
+        _options = options.Value;
     }
 
     public async Task<string> PingAsync(
         CancellationToken cancellationToken = default)
     {
-        var url = _configuration["Wcf:EndpointUrl"]
-            ?? throw new InvalidOperationException(
-                "WCF endpoint URL is not configured.");
+        var url = _options.EndpointUrl;
 
         var binding = new BasicHttpBinding
         {
@@ -63,7 +63,9 @@ public sealed class WcfMonitorClient : IWcfMonitorClient
     private static void CloseOrAbort(ICommunicationObject? resource)
     {
         if (resource is null)
+        {
             return;
+        }
 
         try
         {

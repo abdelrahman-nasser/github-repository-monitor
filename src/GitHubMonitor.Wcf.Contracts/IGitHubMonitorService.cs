@@ -1,4 +1,4 @@
-﻿using CoreWCF;
+using CoreWCF;
 
 namespace GitHubMonitor.Wcf.Contracts;
 
