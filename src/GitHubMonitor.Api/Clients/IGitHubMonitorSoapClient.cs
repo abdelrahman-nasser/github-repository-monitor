@@ -1,4 +1,5 @@
 using System.ServiceModel;
+using GitHubMonitor.Api.Clients.Models;
 
 namespace GitHubMonitor.Api.Clients;
 
@@ -12,4 +13,10 @@ public interface IGitHubMonitorSoapClient
         Action = "http://tempuri.org/IGitHubMonitorService/Ping",
         ReplyAction = "*")]
     Task<string> PingAsync();
+
+    [OperationContract(
+        Name = "GetLiveCommits",
+        Action = "http://tempuri.org/IGitHubMonitorService/GetLiveCommits",
+        ReplyAction = "*")]
+    Task<GitCommitDto[]> GetLiveCommitsAsync();
 }

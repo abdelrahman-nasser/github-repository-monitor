@@ -36,4 +36,20 @@ app.MapGet("/api/diagnostics/wcf",
     .WithName("CheckWcfConnection")
     .WithOpenApi();
 
+// Retrieve live commits through the WCF SOAP service
+app.MapGet("/api/github/live",
+    async (IWcfMonitorClient client, CancellationToken cancellationToken) =>
+    {
+        var commits = await client.GetLiveCommitsAsync(cancellationToken);
+
+        return Results.Ok(new
+        {
+            success = true,
+            message = "Live commits retrieved successfully.",
+            data = commits
+        });
+    })
+    .WithName("GetLiveGitHubCommits")
+    .WithOpenApi();
+
 app.Run();
