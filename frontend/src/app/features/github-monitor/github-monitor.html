@@ -1,0 +1,220 @@
+<a class="skip-link" href="#live-heading">Skip to commits</a>
+<main class="dashboard">
+  <header class="page-header">
+    <div class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 32 32" fill="none">
+        <path d="M10 9v14m12-14v5a7 7 0 0 1-7 7h-5" stroke="currentColor" stroke-width="2" />
+        <circle cx="10" cy="8" r="3" />
+        <circle cx="22" cy="8" r="3" />
+        <circle cx="10" cy="24" r="3" />
+      </svg>
+    </div>
+    <div class="heading-copy">
+      <p class="eyebrow">REPOSITORY ACTIVITY</p>
+      <h1>GitHub Repository Monitor</h1>
+      <p>One place for live commits and scheduled snapshots.</p>
+    </div>
+    <span class="mode-badge"
+      ><span aria-hidden="true"></span>{{ isMock ? 'Mock mode' : 'API mode' }}</span
+    >
+  </header>
+
+  @if (isMock) {
+    <aside class="mock-notice" aria-label="Sample data notice">
+      <strong>Sample workspace</strong>
+      <span
+        >You’re viewing sample commits. Refreshes and synchronization timestamps are
+        simulated.</span
+      >
+    </aside>
+  }
+
+  <section class="stats" aria-label="Repository statistics">
+    <article class="stat-card">
+      <span class="stat-label"
+        ><span class="stat-dot live" aria-hidden="true"></span>Live Commits</span
+      >
+      <strong>{{ liveLoaded() ? liveCommits().length : '—' }}</strong>
+      <span class="stat-detail">{{
+        loadingLive()
+          ? 'Retrieving latest activity…'
+          : liveError()
+            ? 'Latest request failed'
+            : 'Latest repository activity'
+      }}</span>
+    </article>
+    <article class="stat-card">
+      <span class="stat-label"
+        ><span class="stat-dot scheduled" aria-hidden="true"></span>Scheduled Commits</span
+      >
+      <strong>{{ scheduledLoaded() ? scheduledCommits().length : '—' }}</strong>
+      <span class="stat-detail">{{
+        loadingScheduled()
+          ? 'Reading the snapshot…'
+          : scheduledError()
+            ? 'Latest request failed'
+            : 'Commits in the cached snapshot'
+      }}</span>
+    </article>
+    <article class="stat-card">
+      <span class="stat-label">Scheduler Frequency</span>
+      <strong>60<span class="unit">seconds</span></strong>
+      <span class="stat-detail">{{
+        isMock
+          ? 'Sample snapshot · automatic polling off'
+          : 'Backend schedule · refresh snapshot to update'
+      }}</span>
+    </article>
+  </section>
+
+  <section class="panel" aria-labelledby="live-heading" [attr.aria-busy]="loadingLive()">
+    <header class="panel-header">
+      <div>
+        <div class="section-title">
+          <span class="section-index" aria-hidden="true">01</span>
+          <h2 id="live-heading" tabindex="-1">Live Commits</h2>
+        </div>
+        <p>
+          {{
+            isMock
+              ? 'A preview of the latest repository activity.'
+              : 'Latest commits fetched directly from GitHub.'
+          }}
+        </p>
+      </div>
+      <button
+        #liveRefresh
+        kendoButton
+        themeColor="primary"
+        class="refresh-button"
+        type="button"
+        (click)="refreshLive()"
+        [disabled]="loadingLive()"
+        aria-label="Refresh Live Data"
+      >
+        <span aria-hidden="true">↻</span>{{ loadingLive() ? 'Refreshing…' : 'Refresh Live Data' }}
+      </button>
+    </header>
+    <p class="visually-hidden" role="status">
+      {{
+        loadingLive()
+          ? 'Loading live commits…'
+          : liveError()
+            ? 'Live commits could not be refreshed.'
+            : liveLoaded()
+              ? liveCommits().length + ' live commits loaded.'
+              : ''
+      }}
+    </p>
+    @if (liveError(); as error) {
+      <div class="error-notice">
+        <strong>Live request failed.</strong> {{ error }}
+        <span>{{
+          liveLoaded()
+            ? 'Showing the previous result. Use Refresh Live Data to retry.'
+            : 'Use Refresh Live Data to try again.'
+        }}</span>
+      </div>
+    }
+    <app-commit-table
+      label="Live commits"
+      [commits]="liveCommits()"
+      [loading]="loadingLive()"
+      [failed]="!!liveError()"
+      emptyMessage="No live commits available."
+    />
+  </section>
+
+  <section class="panel" aria-labelledby="scheduled-heading" [attr.aria-busy]="loadingScheduled()">
+    <header class="panel-header">
+      <div>
+        <div class="section-title">
+          <span class="section-index" aria-hidden="true">02</span>
+          <h2 id="scheduled-heading">Scheduled Commits</h2>
+        </div>
+        <p>
+          {{
+            isMock
+              ? 'A sample of the background scheduler’s cached snapshot.'
+              : 'Latest commits captured by the background scheduler.'
+          }}
+        </p>
+      </div>
+      <button
+        #scheduledRefresh
+        kendoButton
+        class="refresh-button secondary"
+        type="button"
+        (click)="refreshScheduled()"
+        [disabled]="loadingScheduled()"
+        aria-label="Refresh scheduled commits"
+      >
+        <span aria-hidden="true">↻</span
+        >{{ loadingScheduled() ? 'Refreshing…' : 'Refresh snapshot' }}
+      </button>
+    </header>
+    <div class="sync-info">
+      <span class="stat-dot" [class.live]="lastSyncTime()" aria-hidden="true"></span>
+      @if (lastSyncTime(); as time) {
+        <span
+          >{{
+            isMock
+              ? 'Sample LastSyncTime (last successful sync):'
+              : 'LastSyncTime (last successful sync):'
+          }}
+          <time [attr.datetime]="time">{{ time | date: 'medium' }}</time></span
+        >
+      } @else {
+        <span>{{
+          loadingScheduled()
+            ? 'Checking synchronization status…'
+            : scheduledError()
+              ? 'Synchronization status unavailable.'
+              : 'Not synchronized yet. Waiting for the first successful sync.'
+        }}</span>
+      }
+      <span class="timezone-note">Dates shown in your local time</span>
+    </div>
+    <p class="visually-hidden" role="status">
+      {{
+        loadingScheduled()
+          ? 'Loading scheduled commits…'
+          : scheduledError()
+            ? 'Scheduled commits could not be refreshed.'
+            : scheduledLoaded()
+              ? scheduledCommits().length + ' scheduled commits loaded.'
+              : ''
+      }}
+    </p>
+    @if (scheduledError(); as error) {
+      <div class="error-notice">
+        <strong>Snapshot request failed.</strong> {{ error }}
+        <span>{{
+          scheduledLoaded()
+            ? 'Showing the previous snapshot. Use Refresh snapshot to retry.'
+            : 'Use Refresh snapshot to try again.'
+        }}</span>
+      </div>
+    }
+    <app-commit-table
+      label="Scheduled commits"
+      [commits]="scheduledCommits()"
+      [loading]="loadingScheduled()"
+      [failed]="!!scheduledError()"
+      emptyMessage="No scheduled commits available yet."
+    />
+  </section>
+
+  <footer class="page-footer">
+    <span>GitHub Repository Monitor</span
+    ><span>{{ isMock ? 'Kendo UI preview · Sample data' : 'Kendo UI · Repository activity' }}</span>
+  </footer>
+</main>
+
+@if (errorMessage(); as message) {
+  <app-error-dialog
+    [message]="message"
+    [returnFocus]="errorReturnFocus()"
+    (closed)="closeError()"
+  />
+}
