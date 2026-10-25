@@ -1,0 +1,20 @@
+<dialog
+  #dialog
+  class="dialog-card"
+  role="alertdialog"
+  aria-modal="true"
+  [attr.aria-labelledby]="titleId"
+  [attr.aria-describedby]="descriptionId"
+  (cancel)="onCancel($event)"
+  (keydown)="onKeydown($event)"
+>
+  <div class="dialog-icon" aria-hidden="true">!</div>
+
+  <h2 [id]="titleId">Something went wrong</h2>
+
+  <p [id]="descriptionId">{{ message() }}</p>
+
+  <div class="dialog-actions">
+    <button #closeButton type="button" (click)="close()" autofocus>Close</button>
+  </div>
+</dialog>

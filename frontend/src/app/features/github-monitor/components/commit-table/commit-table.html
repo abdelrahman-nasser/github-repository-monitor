@@ -1,0 +1,74 @@
+<div
+  class="table-container"
+  role="region"
+  [attr.aria-label]="label() + ', scroll horizontally for all columns'"
+  tabindex="0"
+>
+  <table>
+    <caption class="visually-hidden">
+      {{
+        label()
+      }}
+    </caption>
+    <colgroup>
+      <col class="message-column" />
+      <col class="author-column" />
+      <col class="date-column" />
+      <col class="sha-column" />
+      <col class="source-column" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th scope="col">Message</th>
+        <th scope="col">Author</th>
+        <th scope="col">Date</th>
+        <th scope="col">SHA</th>
+        <th scope="col">Source</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (commit of commits(); track commit.sha) {
+        <tr>
+          <td class="message-cell">{{ commit.message }}</td>
+          <td>{{ commit.author }}</td>
+          <td>
+            <time [attr.datetime]="commit.date"
+              >{{ commit.date | date: 'MMM d, y'
+              }}<span class="commit-time">{{ commit.date | date: 'HH:mm:ss' }}</span></time
+            >
+          </td>
+          <td>
+            <details class="sha-details">
+              <summary [attr.aria-label]="'Show full SHA ' + commit.sha">
+                {{ commit.sha.slice(0, 8) }}
+              </summary>
+              <code>{{ commit.sha }}</code>
+            </details>
+          </td>
+          <td>
+            <span
+              class="source-badge"
+              [class.live]="commit.source === 'Live'"
+              [class.scheduled]="commit.source === 'Scheduled'"
+              >{{ commit.source }}</span
+            >
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="5" class="empty-state">
+            @if (loading()) {
+              <span class="loading-indicator" aria-hidden="true"></span
+              ><strong>Loading commits…</strong><span>Retrieving repository activity.</span>
+            } @else if (failed()) {
+              <strong>Commits unavailable</strong><span>Refresh this section to try again.</span>
+            } @else {
+              <strong>{{ emptyMessage() }}</strong
+              ><span>Commits will appear here when they become available.</span>
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
