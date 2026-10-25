@@ -1,5 +1,6 @@
 using GitHubMonitor.Api.Clients;
 using GitHubMonitor.Api.Extensions;
+using GitHubMonitor.Api.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,20 +21,26 @@ if (app.Environment.IsDevelopment())
 // HTTPS redirection
 app.UseHttpsRedirection();
 
-// Temporary WCF connectivity test
-app.MapGet("/api/diagnostics/wcf",
-    async (IWcfMonitorClient client, CancellationToken cancellationToken) =>
-    {
-        var result = await client.PingAsync(cancellationToken);
+// Controller-based endpoints
+app.MapControllers();
 
-        return Results.Ok(new
+// Temporary WCF connectivity diagnostics
+if (app.Environment.IsDevelopment())
+{
+    app.MapGet("/api/diagnostics/wcf",
+        async (
+            IWcfMonitorClient client,
+            CancellationToken cancellationToken) =>
         {
-            success = true,
-            message = "WCF connection successful",
-            data = result
-        });
-    })
-    .WithName("CheckWcfConnection")
-    .WithOpenApi();
+            var result = await client.PingAsync(cancellationToken);
+
+            return Results.Ok(new ApiResponse<string>(
+                    Success: true,
+                    Message: "WCF connection successful",
+                    Data: result));
+        })
+        .WithName("CheckWcfConnection")
+        .WithOpenApi();
+}
 
 app.Run();

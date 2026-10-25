@@ -1,0 +1,32 @@
+@if (isOpen()) {
+  <kendo-dialog
+    #dialog
+    class="error-dialog"
+    width="min(440px, calc(100vw - 32px))"
+    maxHeight="calc(100dvh - 32px)"
+    [minWidth]="0"
+    [animation]="false"
+    autoFocusedElement=".close-button"
+    (close)="close()"
+  >
+    <kendo-dialog-titlebar>
+      <h2 [id]="titleId">Something went wrong</h2>
+    </kendo-dialog-titlebar>
+
+    <div class="dialog-icon" aria-hidden="true">!</div>
+    <p [id]="descriptionId">{{ message() }}</p>
+
+    <kendo-dialog-actions layout="end">
+      <button
+        #closeButton
+        kendoButton
+        class="close-button"
+        themeColor="primary"
+        type="button"
+        (click)="close()"
+      >
+        Close
+      </button>
+    </kendo-dialog-actions>
+  </kendo-dialog>
+}

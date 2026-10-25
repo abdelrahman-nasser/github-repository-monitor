@@ -1,0 +1,46 @@
+:host {
+  display: contents;
+}
+
+.dialog-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 18px;
+  border-radius: 12px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+h2 {
+  margin: 0;
+  color: #17243b;
+  font-size: 21px;
+  line-height: 1.35;
+}
+
+p {
+  margin: 0;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.close-button {
+  min-height: 44px;
+  padding: 11px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  h2 {
+    font-size: 18px;
+  }
+}

@@ -1,4 +1,5 @@
 using System.ServiceModel;
+using GitHubMonitor.Api.Clients.Models;
 
 namespace GitHubMonitor.Api.Clients;
 
@@ -12,4 +13,18 @@ public interface IGitHubMonitorSoapClient
         Action = "http://tempuri.org/IGitHubMonitorService/Ping",
         ReplyAction = "*")]
     Task<string> PingAsync();
+
+    [OperationContract(
+        Name = "GetLiveCommits",
+        Action = "http://tempuri.org/IGitHubMonitorService/GetLiveCommits",
+        ReplyAction = "*")]
+    [FaultContract(typeof(GitHubFault), Name = "GitHubFault",
+        Namespace = "urn:github-monitor:faults", Action = GitHubFault.Action)]
+    Task<GitCommitDto[]> GetLiveCommitsAsync();
+
+    [OperationContract(
+        Name = "GetScheduledCommits",
+        Action = "http://tempuri.org/IGitHubMonitorService/GetScheduledCommits",
+        ReplyAction = "*")]
+    Task<ScheduledCommitsDto> GetScheduledCommitsAsync();
 }

@@ -1,0 +1,76 @@
+name: Frontend CI
+
+on:
+  push:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-ci.yml"
+  pull_request:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Activate Kendo UI license for trusted builds
+        if: >-
+          github.actor != 'dependabot[bot]' &&
+          (github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name == github.repository)
+        env:
+          TELERIK_LICENSE: ${{ secrets.TELERIK_LICENSE }}
+        run: |
+          if [ -n "$TELERIK_LICENSE" ]; then
+            npx --no-install kendo-ui-license activate
+          else
+            echo "::warning::TELERIK_LICENSE is unavailable; build and tests will run without license activation. This run does not verify licensed execution."
+          fi
+
+      - name: Explain unlicensed untrusted PR checks
+        if: >-
+          github.actor == 'dependabot[bot]' ||
+          (github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name != github.repository)
+        run: echo "::notice::Untrusted PR checks run without a Telerik secret. Build and tests still run; licensed execution requires a trusted build with TELERIK_LICENSE."
+
+      - name: Build production frontend
+        run: npm run build
+
+      - name: Run Angular tests
+        run: npm test -- --watch=false
+
+      - name: Verify production API mode
+        run: npm test -- --watch=false --configuration production
+
+      - name: Check strict TypeScript and unused code
+        run: |
+          npx tsc --project tsconfig.app.json --noEmit --noUnusedLocals --noUnusedParameters
+          npx tsc --project tsconfig.spec.json --noEmit --noUnusedLocals --noUnusedParameters
+
+      - name: Verify frontend formatting
+        run: npx prettier . --check
+
+      - name: Verify workflow formatting
+        run: npx prettier ../.github/workflows/frontend-ci.yml --check --end-of-line lf

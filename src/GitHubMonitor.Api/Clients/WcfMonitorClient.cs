@@ -1,4 +1,5 @@
 using System.ServiceModel;
+using GitHubMonitor.Api.Clients.Models;
 using GitHubMonitor.Api.Configuration;
 using Microsoft.Extensions.Options;
 
@@ -13,33 +14,56 @@ public sealed class WcfMonitorClient : IWcfMonitorClient
         _options = options.Value;
     }
 
-    public async Task<string> PingAsync(
+    public Task<string> PingAsync(
         CancellationToken cancellationToken = default)
     {
-        var url = _options.EndpointUrl;
+        return ExecuteAsync(
+            client => client.PingAsync(),
+            cancellationToken);
+    }
+
+    public Task<GitCommitDto[]> GetLiveCommitsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(
+            client => client.GetLiveCommitsAsync(),
+            cancellationToken);
+    }
+
+    public Task<ScheduledCommitsDto> GetScheduledCommitsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(
+            client => client.GetScheduledCommitsAsync(),
+            cancellationToken);
+    }
+
+    private async Task<T> ExecuteAsync<T>(
+        Func<IGitHubMonitorSoapClient, Task<T>> operation,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
 
         var binding = new BasicHttpBinding
         {
             OpenTimeout = TimeSpan.FromSeconds(5),
-            SendTimeout = TimeSpan.FromSeconds(10),
+            SendTimeout = TimeSpan.FromSeconds(20),
             CloseTimeout = TimeSpan.FromSeconds(5)
         };
 
         var factory = new ChannelFactory<IGitHubMonitorSoapClient>(
             binding,
-            new EndpointAddress(url));
+            new EndpointAddress(_options.EndpointUrl));
 
         IClientChannel? channel = null;
         var completed = false;
 
         try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
             var client = factory.CreateChannel();
             channel = (IClientChannel)client;
 
-            var result = await client.PingAsync()
+            var result = await operation(client)
                 .WaitAsync(cancellationToken);
 
             completed = true;
