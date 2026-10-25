@@ -90,9 +90,9 @@
         type="button"
         (click)="refreshLive()"
         [disabled]="loadingLive()"
-        aria-label="Refresh live commits"
+        aria-label="Refresh Live Data"
       >
-        <span aria-hidden="true">↻</span>{{ loadingLive() ? 'Refreshing…' : 'Refresh live' }}
+        <span aria-hidden="true">↻</span>{{ loadingLive() ? 'Refreshing…' : 'Refresh Live Data' }}
       </button>
     </header>
     <p class="visually-hidden" role="status">
@@ -111,8 +111,8 @@
         <strong>Live request failed.</strong> {{ error }}
         <span>{{
           liveLoaded()
-            ? 'Showing the previous result. Use Refresh live to retry.'
-            : 'Use Refresh live to try again.'
+            ? 'Showing the previous result. Use Refresh Live Data to retry.'
+            : 'Use Refresh Live Data to try again.'
         }}</span>
       </div>
     }
@@ -157,7 +157,11 @@
       <span class="stat-dot" [class.live]="lastSyncTime()" aria-hidden="true"></span>
       @if (lastSyncTime(); as time) {
         <span
-          >{{ isMock ? 'Sample last successful sync:' : 'Last successful sync:' }}
+          >{{
+            isMock
+              ? 'Sample LastSyncTime (last successful sync):'
+              : 'LastSyncTime (last successful sync):'
+          }}
           <time [attr.datetime]="time">{{ time | date: 'medium' }}</time></span
         >
       } @else {

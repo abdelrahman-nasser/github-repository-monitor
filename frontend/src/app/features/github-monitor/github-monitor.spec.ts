@@ -25,7 +25,7 @@ describe('GithubMonitor', () => {
   }
 
   function liveButton(): HTMLButtonElement {
-    return liveRegion().querySelector('button[aria-label="Refresh live commits"]')!;
+    return liveRegion().querySelector('button[aria-label="Refresh Live Data"]')!;
   }
 
   function scheduledButton(): HTMLButtonElement {
@@ -105,13 +105,13 @@ describe('GithubMonitor', () => {
       expect(button.type).toBe('button');
       expect(button.textContent).toContain('Refreshing…');
     }
-    expect(liveButton().getAttribute('aria-label')).toBe('Refresh live commits');
+    expect(liveButton().getAttribute('aria-label')).toBe('Refresh Live Data');
     expect(scheduledButton().getAttribute('aria-label')).toBe('Refresh scheduled commits');
 
     respondLive();
     respondScheduled();
 
-    expect(liveButton().textContent).toContain('Refresh live');
+    expect(liveButton().textContent).toContain('Refresh Live Data');
     expect(scheduledButton().textContent).toContain('Refresh snapshot');
     expect(fixture.nativeElement.querySelector('footer').textContent).toContain('Kendo UI');
   });
@@ -153,6 +153,13 @@ describe('GithubMonitor', () => {
     expect(scheduledGridContainer?.getAttribute('aria-label')).toContain('Scheduled commits');
     expect(liveGridContainer?.querySelector('kendo-grid')).not.toBeNull();
     expect(scheduledGridContainer?.querySelector('kendo-grid')).not.toBeNull();
+    for (const region of [liveRegion(), scheduledRegion()]) {
+      expect(
+        [...region.querySelectorAll('.k-grid-header .k-column-title')].map((title) =>
+          title.textContent?.trim(),
+        ),
+      ).toEqual(['Commit Message', 'Author', 'Date', 'Commit SHA', 'Source']);
+    }
     expect(liveRegion().querySelectorAll('kendo-grid .k-grid-content tbody tr')).toHaveLength(
       MOCK_COMMITS.length,
     );
@@ -167,6 +174,7 @@ describe('GithubMonitor', () => {
     expect(scheduledRegion().querySelector('time')?.getAttribute('datetime')).toBe(
       MOCK_LAST_SYNC_TIME,
     );
+    expect(scheduledRegion().textContent).toContain('LastSyncTime (last successful sync):');
   });
 
   it('refreshes live data while retaining previous rows and ignores overlapping refreshes', () => {
@@ -236,6 +244,25 @@ describe('GithubMonitor', () => {
     expect(liveRegion().querySelectorAll('kendo-grid .k-grid-content tbody tr')).toHaveLength(
       MOCK_COMMITS.length,
     );
+  });
+
+  it.each([
+    'GitHub authentication failed. Check the server-side GitHub credentials.',
+    'GitHub request timed out. Please try again.',
+  ])('preserves an upstream failure in the live state and Kendo Dialog: %s', (message) => {
+    respondScheduled();
+    liveRequests[0].error(new Error(message));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.liveError()).toBe(message);
+    expect(fixture.componentInstance.loadingLive()).toBe(false);
+    expect(fixture.componentInstance.liveCommits()).toEqual([]);
+    expect(liveRegion().querySelectorAll('tbody tr .message-cell')).toHaveLength(0);
+    expect(liveRegion().textContent).toContain('Commits unavailable');
+    expect(scheduledRegion().querySelectorAll('tbody tr')).toHaveLength(MOCK_COMMITS.length);
+    expect(
+      fixture.nativeElement.querySelector('kendo-dialog [role="dialog"]').textContent,
+    ).toContain(message);
   });
 
   it('preserves the last successful snapshot and sync time on scheduled failure', () => {

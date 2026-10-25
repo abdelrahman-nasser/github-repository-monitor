@@ -11,4 +11,6 @@ public sealed class GitHubOptions
     public required string Token { get; init; }
 
     public string? Branch { get; init; }
+
+    public TimeSpan RequestTimeout { get; init; } = TimeSpan.FromSeconds(15);
 }

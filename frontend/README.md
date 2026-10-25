@@ -1,104 +1,120 @@
 # GitHub Repository Monitor frontend
 
-Native Angular 22 dashboard built with standalone components, TypeScript 6, Signals, SCSS, Angular Router, and Vitest. Development defaults to mock mode and works without the .NET backend; production defaults to the real API. No UI framework or Kendo package is installed.
+Angular 22 dashboard using standalone components, Signals, TypeScript 6, SCSS,
+and Kendo UI Grid, Dialog, and Buttons. See the [root README](../README.md) for
+architecture and backend endpoints, [setup guide](../docs/setup.md) for service
+startup and licensing, and [testing guide](../docs/testing.md) for quality
+gates.
 
 ## Run locally
 
-Use Node.js 24 and npm 11. From PowerShell:
+Use Node.js 24.15 or later in the Node 24 family and npm 11.19.0. From the
+repository root in PowerShell:
 
 ```powershell
-cd D:\Dev\GitHubRepositoryMonitor\frontend
+cd frontend
 npm ci
-npm start
 ```
 
-Open [http://localhost:4200](http://localhost:4200). Both sections load automatically. **Refresh live** retrieves live commits again; **Refresh snapshot** reads the scheduled cache again. There is no frontend polling timer. The displayed 60-second interval describes the backend scheduler; mock mode uses fixed sample snapshots.
+Activate a valid Telerik trial or commercial license using the
+[setup guide](../docs/setup.md#kendo-ui-license) before running the dashboard or
+building it. Keep the personal license file outside the repository. The current
+license used for prior local verification is a time-limited trial; CI activation
+requires separate setup.
 
-## Mock and API configuration
+Choose a mode:
 
-Angular build configurations select the API mode through `src/environments/environment.ts`, which `app.config.ts` provides to `GithubApiService`:
+| Command                                        | Behavior                                                    |
+| ---------------------------------------------- | ----------------------------------------------------------- |
+| `npm start`                                    | Development with mock data; no backend required.            |
+| `npm start -- --configuration development-api` | Development with the real REST API through the local proxy. |
+| `npm run build`                                | Production build using the real REST API.                   |
+| `npm run build -- --configuration development` | Development build using mock data.                          |
 
-| Command                                        | Configuration     | API mode                                      |
-| ---------------------------------------------- | ----------------- | --------------------------------------------- |
-| `npm start`                                    | `development`     | Mock success by default; no backend required. |
-| `npm start -- --configuration development-api` | `development-api` | Real API through the development proxy.       |
-| `npm run build`                                | `production`      | Real API using relative `/api` endpoints.     |
-| `npm run build -- --configuration development` | `development`     | Mock mode for an offline development build.   |
+Open [http://localhost:4200](http://localhost:4200) after starting the
+development server. For API mode, start the CoreWCF host and REST API first
+using the setup guide. `src/proxy.conf.json` forwards `/api/**` to
+`http://localhost:5203`.
 
-The base `src/environments/environment.ts` selects API mode. The `development` build replaces it with `src/environments/environment.development.ts`, whose default configuration is:
+Production calls relative `/api/github/live` and `/api/github/scheduled`
+endpoints. Configure production hosting to route `/api` to the REST API and
+serve the Angular application. The development proxy is not included in the
+production bundle. No GitHub credentials belong in frontend configuration.
 
-```typescript
-import type { GithubApiConfig } from '../app/core/services/github-api.service';
+## Mock configuration
 
-export const environment = {
-  production: false,
-  githubApi: { mode: 'mock', mockScenario: 'success' } satisfies GithubApiConfig,
-};
-```
+`src/environments/environment.development.ts` selects mock mode with
+`mockScenario: 'success'`. Edit its `githubApi` configuration to select a
+scenario or set `mockDelayMs` (600 milliseconds by default). Only the
+`development` build replaces the base environment; `development-api` and
+production use the base API configuration.
 
-Edit `githubApi` in `src/environments/environment.development.ts` to choose an offline scenario or adjust its delay. The development API configuration uses the base environment, so these mock settings do not affect it or production.
+| `mockScenario` | Result                                                                     |
+| -------------- | -------------------------------------------------------------------------- |
+| `success`      | Sample commits in both grids and a fixed sample synchronization timestamp. |
+| `empty`        | Empty grids with a successful snapshot timestamp.                          |
+| `unsynced`     | Sample live commits; empty scheduled snapshot with no timestamp.           |
+| `failure`      | Simulated HTTP service errors.                                             |
+| `timeout`      | Requests time out after 25 seconds, as real HTTP requests do.              |
+| `unavailable`  | Simulated connection failures.                                             |
 
-| Setting                       | Behavior                                                                                   |
-| ----------------------------- | ------------------------------------------------------------------------------------------ |
-| `mockScenario: 'success'`     | Sample commits in both sections and a fixed sample synchronization timestamp.              |
-| `mockScenario: 'empty'`       | Empty live results and a successfully synchronized empty snapshot with a valid timestamp.  |
-| `mockScenario: 'unsynced'`    | Sample live commits and an empty scheduled cache with no synchronization timestamp.        |
-| `mockScenario: 'failure'`     | Both requests fail with a simulated HTTP service error.                                    |
-| `mockScenario: 'timeout'`     | Both requests time out after 15 seconds with the same message as a real timed-out request. |
-| `mockScenario: 'unavailable'` | Both requests fail with the same connection message as an unavailable backend.             |
-| `mockDelayMs: 600`            | Delay in milliseconds for scenarios other than timeout; 600 is the default.                |
+Mock mode sends no HTTP requests. Fixtures in
+`src/app/core/mocks/mock-commits.ts` contain synthetic demonstration data. API
+mode validates the `{ success, message, data }` response and commit fields;
+errors do not switch the application to mock data.
 
-Fixtures live in `src/app/core/mocks/mock-commits.ts`, independent of feature components. Commit identifiers, messages, authors, dates, and the last synchronization timestamp are synthetic demonstration values. Mock mode sends no HTTP requests.
+## Dashboard behavior
 
-To intentionally test against a local backend, start that backend separately and run:
+- Both sections load independently when the dashboard opens. **Refresh Live Data**
+  fetches current GitHub commits; **Refresh snapshot** reads the backend's
+  cached commits.
+- There is no frontend polling timer. The displayed 60-second interval describes
+  the backend scheduler; use **Refresh snapshot** to display its latest result.
+- Kendo Grids show the message, author, date, SHA, and source, with resizable
+  columns, keyboard navigation, and horizontally scrollable regions. SHA
+  disclosures expose the full identifier.
+- Kendo Buttons disable each refresh while its request is pending. Loading
+  indicators, successful empty results, unsynchronized snapshots, and errors
+  have distinct states.
+- Kendo Dialog displays request errors and restores focus when dismissed. A
+  failed refresh keeps the last successful rows and synchronization timestamp
+  visible with an error notice.
+- Dates and `LastSyncTime` display in the browser's local time zone. Mock
+  timestamps are labeled as sample data.
 
-```powershell
-npm start -- --configuration development-api
-```
-
-`provideHttpClient()` is already registered. `GithubApiService` calls `GET /api/github/live` and `GET /api/github/scheduled`; `angular.json` enables `src/proxy.conf.json` for the development server, forwarding `/api/**` to `http://localhost:5203`. For a deployed frontend, configure its hosting server to forward `/api` to the backend; the development proxy is not part of the production bundle. Production HTTP requests contain no hardcoded localhost address.
-
-The service unwraps the typed `{ success, message, data }` response, validates commit data and synchronization timestamps, and surfaces failed responses, HTTP errors, and request timeouts. API mode never silently falls back to mock data. No GitHub credentials belong in the frontend.
-
-## Structure and behavior
-
-- `core/services/github-api.service.ts`: configurable mock/HTTP access, response validation, and error interpretation. Mock timers and HTTP requests support cancellation.
-- `core/mocks/mock-commits.ts`: synthetic demonstration fixtures shared by the service and tests.
-- `src/environments/`: build-selected API configuration; production and explicit backend development use the API by default.
-- `shared/models/`: commit, API envelope, and scheduled snapshot models compatible with the REST API.
-- `features/github-monitor/github-monitor.*`: local Signal state, independent loading/error states, guarded refresh actions, and subscriptions cancelled on destruction.
-- `features/github-monitor/components/commit-table/`: presentation-only native table shared by both sections. Narrow screens use keyboard-focusable horizontal scroll regions; commit messages wrap and native SHA disclosures expose the full identifier.
-- `shared/components/error-dialog/`: reusable native modal dialog with a required message, Close and Escape handling, accessible labels, background interaction blocking, and focus management.
-- `app.routes.ts`: lazy dashboard route and fallback routing.
-
-Components use `OnPush` and Angular's native template control flow. Refresh failures keep the previous successful data visible and explain that it may be stale. Empty results and an unsynchronized cache have distinct states. Dates display in the browser's local time zone.
+The lazy dashboard route is in `src/app/app.routes.ts`. Data access and
+validation live in `src/app/core/services/github-api.service.ts`; feature state
+lives in `src/app/features/github-monitor/`; reusable grids, dialog, and models
+are under the feature and shared directories.
 
 ## Verification
 
-Run from `frontend/`:
+From `frontend/`:
 
 ```powershell
 npm run build
 npm test -- --watch=false
 npm test -- --watch=false --configuration production
-npx tsc --project tsconfig.app.json --noEmit --noUnusedLocals --noUnusedParameters
-npx tsc --project tsconfig.spec.json --noEmit --noUnusedLocals --noUnusedParameters
+npx tsc -p tsconfig.app.json --noEmit --noUnusedLocals --noUnusedParameters
+npx tsc -p tsconfig.spec.json --noEmit --noUnusedLocals --noUnusedParameters
 npx prettier . --check
-npx prettier ../.github/workflows/frontend-ci.yml --check
+npx prettier ../.github/workflows/frontend-ci.yml --check --end-of-line lf
 ```
 
-The production build writes to `dist/`. The focused production test uses the production build configuration to verify real API mode; the default test run uses the development configuration. TypeScript checks apply the project's strict settings to app and test code and also reject unused locals and parameters. Vitest uses Angular TestBed and jsdom, with fake data providers and HTTP testing utilities; tests need no backend connectivity. Native dialog unit tests model the browser dialog API because jsdom has no modal top layer. Browser checks are still useful for visual layout and actual keyboard behavior.
+The default Vitest suite uses Angular TestBed and jsdom; the focused production
+suite verifies API configuration. Tests use fake providers and HTTP testing
+utilities and need no backend or GitHub token. No standalone end-to-end runner
+or lint script is configured. Browser layout and keyboard checks remain separate
+from unit tests.
 
-No standalone end-to-end runner or lint script is configured. Prettier configuration is in `.prettierrc`.
+Frontend CI runs dependency installation, trusted-context license activation,
+the production build, both test
+configurations, strict app and spec TypeScript checks, and frontend/workflow
+formatting checks. The activation step receives `TELERIK_LICENSE` only for
+trusted builds. Missing secrets and fork/Dependabot PRs explicitly report
+unlicensed execution while build/tests continue. Manual secret provisioning
+and hosted licensed execution remain unverified; see the setup guide.
 
-## Frontend CI
-
-`.github/workflows/frontend-ci.yml` runs independently of Backend CI on pushes and pull requests that change `frontend/**` or the frontend workflow itself. It uses the GitHub-hosted `ubuntu-latest` runner, Node.js 24, and npm's download cache keyed by `frontend/package-lock.json`.
-
-All command steps run from `frontend/`: `npm ci`, the production build, Angular tests without watch mode, the focused production API mode test, strict TypeScript and unused-code checks, and Prettier checks for the frontend and workflow. Tests use mocks and HTTP testing utilities, so CI needs neither a running backend nor a GitHub API token.
-
-## Next integration steps
-
-When the backend can run, opt in to API mode and verify both endpoints through the development proxy: successful responses, an unsynchronized cache, synchronization timestamps, refreshes, and service errors. Keep mock scenarios available for offline frontend work.
-
-After real API verification, migrate the native commit table and error dialog presentation to the required Kendo Grid and Kendo Dialog. Preserve the existing data service, models, and dashboard state. Kendo installation, licensing, and themes are outside this native implementation.
+See the [delivery checklist](../docs/delivery-checklist.md) for recorded
+results, prior browser evidence, bundle warnings, and remaining verification
+limits.

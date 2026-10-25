@@ -14,6 +14,27 @@ public sealed class GitHubCommitProvider(
     public async Task<IReadOnlyList<GitCommit>> GetLatestCommitsAsync(
         CancellationToken cancellationToken = default)
     {
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        deadline.CancelAfter(options.RequestTimeout);
+
+        try
+        {
+            return await FetchCommitsAsync(deadline.Token);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            throw;
+        }
+        catch (OperationCanceledException) when (deadline.IsCancellationRequested)
+        {
+            throw new TimeoutException("GitHub request timed out.");
+        }
+    }
+
+    private async Task<IReadOnlyList<GitCommit>> FetchCommitsAsync(
+        CancellationToken cancellationToken)
+    {
         var owner = Uri.EscapeDataString(options.Owner);
         var repository = Uri.EscapeDataString(options.Repository);
 
@@ -51,25 +72,28 @@ public sealed class GitHubCommitProvider(
                      "X-RateLimit-Remaining", out var remaining) &&
                  remaining.Contains("0"));
 
-            var message = isRateLimited
-                ? "GitHub rate limit exceeded."
-                : statusCode switch
-                {
-                    HttpStatusCode.Unauthorized =>
-                        "GitHub authentication failed.",
+            if (isRateLimited)
+            {
+                throw new GitHubRateLimitException(statusCode);
+            }
 
-                    HttpStatusCode.Forbidden =>
-                        "GitHub denied repository access.",
+            var message = statusCode switch
+            {
+                HttpStatusCode.Unauthorized =>
+                    "GitHub authentication failed.",
 
-                    HttpStatusCode.NotFound =>
-                        "GitHub repository or branch is unavailable.",
+                HttpStatusCode.Forbidden =>
+                    "GitHub denied repository access.",
 
-                    _ when (int)statusCode >= 500 =>
-                        "GitHub service is temporarily unavailable.",
+                HttpStatusCode.NotFound =>
+                    "GitHub repository or branch is unavailable.",
 
-                    _ =>
-                        $"GitHub request failed: HTTP {(int)statusCode}."
-                };
+                _ when (int)statusCode >= 500 =>
+                    "GitHub service is temporarily unavailable.",
+
+                _ =>
+                    $"GitHub request failed: HTTP {(int)statusCode}."
+            };
 
             throw new HttpRequestException(
                 message, null, statusCode);
@@ -84,7 +108,8 @@ public sealed class GitHubCommitProvider(
                 "GitHub returned an invalid commit response.");
         }
 
-        return commits.Select(MapCommit).ToArray();
+        // GitHub returns newest first. Enforce the limit even for an oversized response.
+        return commits.Take(10).Select(MapCommit).ToArray();
     }
 
     private static GitCommit MapCommit(GitHubCommitResponse response)

@@ -18,6 +18,8 @@ public interface IGitHubMonitorSoapClient
         Name = "GetLiveCommits",
         Action = "http://tempuri.org/IGitHubMonitorService/GetLiveCommits",
         ReplyAction = "*")]
+    [FaultContract(typeof(GitHubFault), Name = "GitHubFault",
+        Namespace = "urn:github-monitor:faults", Action = GitHubFault.Action)]
     Task<GitCommitDto[]> GetLiveCommitsAsync();
 
     [OperationContract(

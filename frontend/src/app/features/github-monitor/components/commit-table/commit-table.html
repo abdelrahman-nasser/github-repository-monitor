@@ -12,7 +12,7 @@
     [navigable]="true"
   >
     <!-- Commit message -->
-    <kendo-grid-column field="message" title="Message" [width]="350">
+    <kendo-grid-column field="message" title="Commit Message" [width]="350">
       <ng-template kendoGridCellTemplate let-dataItem>
         <span class="message-cell">{{ dataItem.message }}</span>
       </ng-template>
@@ -38,7 +38,7 @@
     </kendo-grid-column>
 
     <!-- Commit SHA -->
-    <kendo-grid-column field="sha" title="SHA" [width]="150">
+    <kendo-grid-column field="sha" title="Commit SHA" [width]="150">
       <ng-template kendoGridCellTemplate let-dataItem>
         <details class="sha-details">
           <summary [attr.aria-label]="'Show full SHA ' + dataItem.sha">

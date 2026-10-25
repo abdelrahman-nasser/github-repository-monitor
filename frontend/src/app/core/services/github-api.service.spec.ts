@@ -238,6 +238,25 @@ describe('GithubApiService', () => {
     await result;
   });
 
+  it.each([
+    [502, 'GitHub authentication failed. Check the server-side GitHub credentials.'],
+    [504, 'GitHub request timed out. Please try again.'],
+  ] as const)(
+    'preserves the safe upstream HTTP %s message without mock success',
+    async (status, message) => {
+      const service = configure({ mode: 'api' });
+      const next = vi.fn();
+      const error = vi.fn();
+      service.getLiveCommits().subscribe({ next, error });
+      http
+        .expectOne('/api/github/live')
+        .flush({ success: false, message, data: null }, { status, statusText: 'Upstream Failure' });
+
+      expect(next).not.toHaveBeenCalled();
+      expect(error).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ message }));
+    },
+  );
+
   it('reports connectivity failures clearly', async () => {
     const service = configure({ mode: 'api' });
     const result = expect(firstValueFrom(service.getScheduledCommits())).rejects.toThrow(

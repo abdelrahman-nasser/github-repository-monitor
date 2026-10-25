@@ -21,8 +21,10 @@ public static class ServiceCollectionExtensions
                 options =>
                     !string.IsNullOrWhiteSpace(options.Owner) &&
                     !string.IsNullOrWhiteSpace(options.Repository) &&
-                    !string.IsNullOrWhiteSpace(options.Token),
-                "GitHub owner, repository and token are required.")
+                    !string.IsNullOrWhiteSpace(options.Token) &&
+                    options.RequestTimeout > TimeSpan.Zero &&
+                    options.RequestTimeout <= TimeSpan.FromSeconds(15),
+                "GitHub owner, repository and token are required; request timeout must be between zero and 15 seconds.")
             .ValidateOnStart();
 
         // Provide validated options to the GitHub client
@@ -34,7 +36,8 @@ public static class ServiceCollectionExtensions
             IGitHubCommitProvider,
             GitHubCommitProvider>(client =>
             {
-                client.Timeout = TimeSpan.FromSeconds(15);
+                // The provider owns one deadline, including response-body deserialization.
+                client.Timeout = Timeout.InfiniteTimeSpan;
             });
 
         // Application use cases

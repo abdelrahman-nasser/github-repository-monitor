@@ -23,12 +23,14 @@ public sealed class GitHubCommitProviderErrorTests
         var provider = CreateProvider(httpClient);
 
         // Act
-        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+        var exception = await Assert.ThrowsAnyAsync<HttpRequestException>(
             () => provider.GetLatestCommitsAsync());
 
         // Assert
         Assert.Equal(statusCode, exception.StatusCode);
         Assert.Equal(expectedMessage, exception.Message);
+        Assert.IsType(statusCode == HttpStatusCode.TooManyRequests
+            ? typeof(GitHubRateLimitException) : typeof(HttpRequestException), exception);
     }
 
     [Fact]
@@ -45,12 +47,37 @@ public sealed class GitHubCommitProviderErrorTests
         var provider = CreateProvider(httpClient);
 
         // Act
-        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+        var exception = await Assert.ThrowsAsync<GitHubRateLimitException>(
             () => provider.GetLatestCommitsAsync());
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, exception.StatusCode);
         Assert.Equal("GitHub rate limit exceeded.", exception.Message);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.Forbidden, "0", true)]
+    [InlineData(HttpStatusCode.Forbidden, "10", false)]
+    [InlineData(HttpStatusCode.TooManyRequests, null, true)]
+    public async Task GetLatestCommitsAsync_PreservesStructuredRateLimitClassification(
+        HttpStatusCode statusCode, string? remaining, bool rateLimited)
+    {
+        using var client = CreateClient(() =>
+        {
+            var response = new HttpResponseMessage(statusCode);
+            if (remaining is not null)
+            {
+                response.Headers.Add("X-RateLimit-Remaining", remaining);
+            }
+            return response;
+        });
+
+        var exception = await Assert.ThrowsAnyAsync<HttpRequestException>(
+            () => CreateProvider(client).GetLatestCommitsAsync());
+
+        Assert.Equal(statusCode, exception.StatusCode);
+        Assert.Equal(rateLimited, exception is GitHubRateLimitException);
+        Assert.Equal(rateLimited ? "GitHub rate limit exceeded." : "GitHub denied repository access.", exception.Message);
     }
 
     [Theory]

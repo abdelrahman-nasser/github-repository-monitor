@@ -10,6 +10,8 @@ public interface IGitHubMonitorService
     string Ping();
 
     [OperationContract(Name = "GetLiveCommits")]
+    [FaultContract(typeof(GitHubFault), Name = "GitHubFault",
+        Namespace = "urn:github-monitor:faults", Action = GitHubFault.Action)]
     Task<GitCommitDto[]> GetLiveCommitsAsync();
 
     [OperationContract(Name = "GetScheduledCommits")]

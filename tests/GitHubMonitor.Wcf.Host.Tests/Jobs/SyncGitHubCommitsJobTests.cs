@@ -108,6 +108,23 @@ public sealed class SyncGitHubCommitsJobTests
         Assert.Null(snapshot.LastSyncTime);
     }
 
+    [Fact]
+    public async Task Execute_UpstreamTimeout_PreservesPreviousSnapshotAndTimestamp()
+    {
+        var previousTime = DateTimeOffset.Parse("2026-10-24T12:00:00Z");
+        var store = new InMemoryScheduledCommitsStore();
+        store.Save([new GitCommit("old123", "Previous commit", "Author", previousTime)], previousTime);
+        var previous = store.GetSnapshot();
+        var provider = new Mock<IGitHubCommitProvider>();
+        provider.Setup(x => x.GetLatestCommitsAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TimeoutException("GitHub request timed out."));
+
+        await CreateJob(provider.Object, store).Execute(CreateContext(CancellationToken.None));
+
+        Assert.Same(previous, store.GetSnapshot());
+        Assert.Equal(previousTime, store.GetSnapshot().LastSyncTime);
+    }
+
     private static SyncGitHubCommitsJob CreateJob(
         IGitHubCommitProvider provider,
         IScheduledCommitsStore store)
