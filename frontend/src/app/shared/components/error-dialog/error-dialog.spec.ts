@@ -1,32 +1,41 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+﻿import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ErrorDialog } from './error-dialog';
 
 describe('ErrorDialog', () => {
   let fixture: ComponentFixture<ErrorDialog>;
   let trigger: HTMLButtonElement;
-  let showModal: ReturnType<typeof vi.fn>;
-  let closeDialog: ReturnType<typeof vi.fn>;
-  const originalShowModal = Object.getOwnPropertyDescriptor(
-    HTMLDialogElement.prototype,
-    'showModal',
-  );
-  const originalClose = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, 'close');
+
+  function modal(): HTMLElement | null {
+    return fixture.nativeElement.querySelector('[role="dialog"]');
+  }
+
+  function closeButton(): HTMLButtonElement {
+    return fixture.nativeElement.querySelector('.close-button');
+  }
+
+  function titleClose(): HTMLButtonElement {
+    return fixture.nativeElement.querySelector('kendo-dialog-titlebar button');
+  }
+
+  function pressKey(target: HTMLElement, key: string, shiftKey = false): KeyboardEvent {
+    const event = new KeyboardEvent('keydown', {
+      key,
+      code: key,
+      shiftKey,
+      bubbles: true,
+      cancelable: true,
+    });
+    target.dispatchEvent(event);
+    return event;
+  }
 
   beforeEach(async () => {
-    // jsdom has no modal top layer; model only its open/close API for unit tests.
-    showModal = vi.fn(function (this: HTMLDialogElement) {
-      this.setAttribute('open', '');
-    });
-    closeDialog = vi.fn(function (this: HTMLDialogElement) {
-      this.removeAttribute('open');
-    });
-    Object.defineProperties(HTMLDialogElement.prototype, {
-      showModal: { configurable: true, value: showModal },
-      close: { configurable: true, value: closeDialog },
-    });
-
-    await TestBed.configureTestingModule({ imports: [ErrorDialog] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [ErrorDialog],
+      providers: [provideNoopAnimations()],
+    }).compileComponents();
     trigger = document.createElement('button');
     trigger.textContent = 'Refresh live commits';
     document.body.appendChild(trigger);
@@ -42,23 +51,13 @@ describe('ErrorDialog', () => {
   afterEach(() => {
     fixture?.destroy();
     trigger?.remove();
-    if (originalShowModal) {
-      Object.defineProperty(HTMLDialogElement.prototype, 'showModal', originalShowModal);
-    } else {
-      delete (HTMLDialogElement.prototype as Partial<HTMLDialogElement>).showModal;
-    }
-    if (originalClose) {
-      Object.defineProperty(HTMLDialogElement.prototype, 'close', originalClose);
-    } else {
-      delete (HTMLDialogElement.prototype as Partial<HTMLDialogElement>).close;
-    }
     vi.restoreAllMocks();
   });
 
   it('renders the required message with accessible modal semantics', () => {
     fixture.detectChanges();
-    const dialog = fixture.nativeElement.querySelector('[role="alertdialog"]') as HTMLDialogElement;
-    expect(dialog.open).toBe(true);
+    const dialog = modal()!;
+    expect(dialog).not.toBeNull();
     expect(dialog.getAttribute('aria-modal')).toBe('true');
     expect(document.getElementById(dialog.getAttribute('aria-labelledby')!)?.textContent).toContain(
       'Something went wrong',
@@ -66,38 +65,31 @@ describe('ErrorDialog', () => {
     expect(
       document.getElementById(dialog.getAttribute('aria-describedby')!)?.textContent,
     ).toContain('GitHub is temporarily unavailable. Please try again.');
-    expect(showModal).toHaveBeenCalledOnce();
   });
 
-  it('focuses the close button after opening', () => {
+  it('focuses the close button after opening in zoneless Angular', () => {
     fixture.detectChanges();
-    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('button'));
+    expect(document.activeElement).toBe(closeButton());
   });
 
-  it('keeps Tab and Shift+Tab focused on the sole close control', () => {
+  it('contains Tab and Shift+Tab within the dialog using Kendo keyboard handling', () => {
     fixture.detectChanges();
-    const dialog = fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
-    const closeButton = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+    const close = closeButton();
+    const titleButton = titleClose();
 
-    for (const shiftKey of [false, true]) {
-      const tab = new KeyboardEvent('keydown', {
-        key: 'Tab',
-        shiftKey,
-        bubbles: true,
-        cancelable: true,
-      });
-      dialog.dispatchEvent(tab);
-      expect(tab.defaultPrevented).toBe(true);
-      expect(document.activeElement).toBe(closeButton);
-    }
+    expect(pressKey(close, 'Tab').defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(titleButton);
+    expect(pressKey(titleButton, 'Tab', true).defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(close);
   });
 
   it('closes and restores focus to the triggering control', () => {
     fixture.detectChanges();
     const closed = vi.fn();
     fixture.componentInstance.closed.subscribe(closed);
-    fixture.nativeElement.querySelector('button').click();
-    expect(closeDialog).toHaveBeenCalledOnce();
+    closeButton().click();
+    fixture.detectChanges();
+    expect(modal()).toBeNull();
     expect(closed).toHaveBeenCalledOnce();
     expect(document.activeElement).toBe(trigger);
   });
@@ -108,7 +100,7 @@ describe('ErrorDialog', () => {
     fixture.componentRef.setInput('returnFocus', trigger);
     fixture.detectChanges();
 
-    fixture.nativeElement.querySelector('button').click();
+    closeButton().click();
 
     expect(document.activeElement).toBe(trigger);
   });
@@ -116,6 +108,7 @@ describe('ErrorDialog', () => {
   it('restores the latest error trigger when the message changes while the modal is open', () => {
     fixture.componentRef.setInput('returnFocus', trigger);
     fixture.detectChanges();
+    const originalModal = modal();
     const nextTrigger = document.createElement('button');
     nextTrigger.textContent = 'Refresh scheduled commits';
     document.body.appendChild(nextTrigger);
@@ -128,10 +121,10 @@ describe('ErrorDialog', () => {
       expect(fixture.nativeElement.querySelector('p').textContent).toContain(
         'The scheduled request failed.',
       );
-      expect(showModal).toHaveBeenCalledOnce();
-      expect(document.activeElement).toBe(fixture.nativeElement.querySelector('button'));
+      expect(modal()).toBe(originalModal);
+      expect(document.activeElement).toBe(closeButton());
 
-      fixture.nativeElement.querySelector('button').click();
+      closeButton().click();
 
       expect(document.activeElement).toBe(nextTrigger);
     } finally {
@@ -142,42 +135,99 @@ describe('ErrorDialog', () => {
   it('falls back to the original trigger when the updated error trigger was removed', () => {
     fixture.componentRef.setInput('returnFocus', trigger);
     fixture.detectChanges();
-    const removedTrigger = document.createElement('button');
-    fixture.componentRef.setInput('returnFocus', removedTrigger);
+    fixture.componentRef.setInput('returnFocus', document.createElement('button'));
     fixture.detectChanges();
 
-    fixture.nativeElement.querySelector('button').click();
+    closeButton().click();
 
     expect(document.activeElement).toBe(trigger);
   });
 
-  it('handles the native cancel event generated by Escape', () => {
+  it.each(['action', 'titlebar', 'wrapper'])('dismisses with Escape from the %s', (target) => {
     fixture.detectChanges();
     const closed = vi.fn();
     fixture.componentInstance.closed.subscribe(closed);
-    const cancel = new Event('cancel', { cancelable: true });
-    fixture.nativeElement.querySelector('dialog').dispatchEvent(cancel);
-    expect(cancel.defaultPrevented).toBe(true);
+    const control =
+      target === 'action'
+        ? closeButton()
+        : target === 'titlebar'
+          ? titleClose()
+          : fixture.nativeElement.querySelector('kendo-dialog');
+    control.focus();
+    pressKey(control, 'Escape');
+    fixture.detectChanges();
+
+    expect(modal()).toBeNull();
     expect(closed).toHaveBeenCalledOnce();
     expect(document.activeElement).toBe(trigger);
   });
 
-  it('emits only once if dismissal is requested more than once', () => {
+  it('dismisses from the accessible titlebar Close control', () => {
     fixture.detectChanges();
     const closed = vi.fn();
     fixture.componentInstance.closed.subscribe(closed);
-    fixture.componentInstance.close();
+    expect(titleClose().getAttribute('aria-label')).toBe('Close');
+    titleClose().click();
+    fixture.detectChanges();
+
+    expect(modal()).toBeNull();
+    expect(closed).toHaveBeenCalledOnce();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('emits only once if Escape, click and close request dismissal repeatedly', () => {
+    fixture.detectChanges();
+    const closed = vi.fn();
+    fixture.componentInstance.closed.subscribe(closed);
+    const button = closeButton();
+    pressKey(button, 'Escape');
+    button.click();
     fixture.componentInstance.close();
     expect(closed).toHaveBeenCalledOnce();
   });
 
-  it('closes the modal and restores focus when its host is destroyed', () => {
+  it('restores focus without emitting when its host is destroyed', () => {
     fixture.detectChanges();
     const closed = vi.fn();
     fixture.componentInstance.closed.subscribe(closed);
     fixture.destroy();
-    expect(closeDialog).toHaveBeenCalledOnce();
     expect(document.activeElement).toBe(trigger);
     expect(closed).not.toHaveBeenCalled();
+  });
+
+  it('restores the latest connected trigger on destruction', () => {
+    fixture.detectChanges();
+    const nextTrigger = document.createElement('button');
+    document.body.appendChild(nextTrigger);
+    try {
+      fixture.componentRef.setInput('returnFocus', nextTrigger);
+      fixture.detectChanges();
+      fixture.destroy();
+      expect(document.activeElement).toBe(nextTrigger);
+    } finally {
+      nextTrigger.remove();
+    }
+  });
+
+  it('safely destroys a dialog whose focus target has been disconnected', () => {
+    fixture.detectChanges();
+    trigger.remove();
+    const focus = vi.spyOn(trigger, 'focus');
+    expect(() => fixture.destroy()).not.toThrow();
+    expect(focus).not.toHaveBeenCalled();
+  });
+
+  it('does not steal focus again when destroyed after explicit dismissal', () => {
+    fixture.detectChanges();
+    fixture.componentInstance.close();
+    const focus = vi.spyOn(trigger, 'focus');
+    fixture.destroy();
+    expect(focus).not.toHaveBeenCalled();
+  });
+
+  it('can be destroyed before rendering without querying a missing view', () => {
+    fixture.componentRef.setInput('returnFocus', trigger);
+    expect(() => fixture.destroy()).not.toThrow();
+    expect(document.activeElement).toBe(trigger);
   });
 });

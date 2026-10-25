@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { Subject, throwError } from 'rxjs';
 import { GithubApiService } from '../../core/services/github-api.service';
 import { GitCommit } from '../../shared/models/git-commit.model';
@@ -15,18 +16,20 @@ describe('GithubMonitor', () => {
     getLiveCommits: ReturnType<typeof vi.fn>;
     getScheduledCommits: ReturnType<typeof vi.fn>;
   };
-  const originalShowModal = Object.getOwnPropertyDescriptor(
-    HTMLDialogElement.prototype,
-    'showModal',
-  );
-  const originalClose = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, 'close');
-
   function liveRegion(): HTMLElement {
     return fixture.nativeElement.querySelector('section[aria-labelledby="live-heading"]');
   }
 
   function scheduledRegion(): HTMLElement {
     return fixture.nativeElement.querySelector('section[aria-labelledby="scheduled-heading"]');
+  }
+
+  function liveButton(): HTMLButtonElement {
+    return liveRegion().querySelector('button[aria-label="Refresh live commits"]')!;
+  }
+
+  function scheduledButton(): HTMLButtonElement {
+    return scheduledRegion().querySelector('button[aria-label="Refresh scheduled commits"]')!;
   }
 
   function respondLive(commits: GitCommit[] = [...MOCK_COMMITS]): void {
@@ -47,21 +50,6 @@ describe('GithubMonitor', () => {
   }
 
   beforeEach(async () => {
-    // Native modal behavior is verified in the browser; jsdom needs only the API surface.
-    Object.defineProperties(HTMLDialogElement.prototype, {
-      showModal: {
-        configurable: true,
-        value(this: HTMLDialogElement) {
-          this.setAttribute('open', '');
-        },
-      },
-      close: {
-        configurable: true,
-        value(this: HTMLDialogElement) {
-          this.removeAttribute('open');
-        },
-      },
-    });
     liveRequests = [];
     scheduledRequests = [];
     api = {
@@ -79,7 +67,7 @@ describe('GithubMonitor', () => {
     };
     await TestBed.configureTestingModule({
       imports: [GithubMonitor],
-      providers: [{ provide: GithubApiService, useValue: api }],
+      providers: [provideNoopAnimations(), { provide: GithubApiService, useValue: api }],
     }).compileComponents();
     fixture = TestBed.createComponent(GithubMonitor);
     fixture.detectChanges();
@@ -87,13 +75,6 @@ describe('GithubMonitor', () => {
 
   afterEach(() => {
     fixture.destroy();
-    for (const [key, descriptor] of [
-      ['showModal', originalShowModal],
-      ['close', originalClose],
-    ] as const) {
-      if (descriptor) Object.defineProperty(HTMLDialogElement.prototype, key, descriptor);
-      else delete (HTMLDialogElement.prototype as Partial<HTMLDialogElement>)[key];
-    }
   });
 
   it('creates the dashboard and requests both sources on initialization', () => {
@@ -111,18 +92,70 @@ describe('GithubMonitor', () => {
     expect(liveRegion().querySelector('[role="status"]')?.textContent).toContain(
       'Loading live commits',
     );
-    expect(liveRegion().querySelector('button')?.disabled).toBe(true);
+    expect(liveButton().disabled).toBe(true);
     expect(liveRegion().textContent).not.toContain('No live commits available.');
     respondLive();
-    expect(liveRegion().querySelector('button')?.disabled).toBe(false);
-    expect(scheduledRegion().querySelector('button')?.disabled).toBe(true);
+    expect(liveButton().disabled).toBe(false);
+    expect(scheduledButton().disabled).toBe(true);
+  });
+
+  it('keeps native refresh button semantics, accessible labels and loading text', () => {
+    for (const button of [liveButton(), scheduledButton()]) {
+      expect(button).toBeInstanceOf(HTMLButtonElement);
+      expect(button.type).toBe('button');
+      expect(button.textContent).toContain('Refreshing…');
+    }
+    expect(liveButton().getAttribute('aria-label')).toBe('Refresh live commits');
+    expect(scheduledButton().getAttribute('aria-label')).toBe('Refresh scheduled commits');
+
+    respondLive();
+    respondScheduled();
+
+    expect(liveButton().textContent).toContain('Refresh live');
+    expect(scheduledButton().textContent).toContain('Refresh snapshot');
+    expect(fixture.nativeElement.querySelector('footer').textContent).toContain('Kendo UI');
+  });
+
+  it('disables each refresh independently and ignores clicks while its request is pending', () => {
+    respondLive();
+    respondScheduled();
+
+    liveButton().click();
+    fixture.detectChanges();
+    expect(liveButton().disabled).toBe(true);
+    expect(scheduledButton().disabled).toBe(false);
+    liveButton().click();
+    expect(api.getLiveCommits).toHaveBeenCalledTimes(2);
+
+    scheduledButton().click();
+    fixture.detectChanges();
+    expect(scheduledButton().disabled).toBe(true);
+    scheduledButton().click();
+    expect(api.getScheduledCommits).toHaveBeenCalledTimes(2);
+
+    respondLive();
+    expect(liveButton().disabled).toBe(false);
+    expect(scheduledButton().disabled).toBe(true);
+    respondScheduled();
+    expect(scheduledButton().disabled).toBe(false);
   });
 
   it('renders mock commits in semantic tables with the correct sources and full SHA access', () => {
     respondLive();
     respondScheduled();
-    expect(liveRegion().querySelector('caption')?.textContent?.trim()).toBe('Live commits');
-    expect(liveRegion().querySelectorAll('tbody tr')).toHaveLength(MOCK_COMMITS.length);
+    const liveGridContainer = liveRegion().querySelector('.table-container');
+    const scheduledGridContainer = scheduledRegion().querySelector('.table-container');
+
+    expect(liveGridContainer).not.toBeNull();
+    expect(scheduledGridContainer).not.toBeNull();
+
+    expect(liveGridContainer?.getAttribute('aria-label')).toContain('Live commits');
+    expect(scheduledGridContainer?.getAttribute('aria-label')).toContain('Scheduled commits');
+    expect(liveGridContainer?.querySelector('kendo-grid')).not.toBeNull();
+    expect(scheduledGridContainer?.querySelector('kendo-grid')).not.toBeNull();
+    expect(liveRegion().querySelectorAll('kendo-grid .k-grid-content tbody tr')).toHaveLength(
+      MOCK_COMMITS.length,
+    );
     expect(scheduledRegion().querySelectorAll('tbody tr')).toHaveLength(MOCK_COMMITS.length);
     expect(liveRegion().querySelector('tbody tr')?.textContent).toContain(MOCK_COMMITS[0].message);
     expect(liveRegion().querySelector('tbody tr')?.textContent).toContain('Live');
@@ -138,22 +171,24 @@ describe('GithubMonitor', () => {
 
   it('refreshes live data while retaining previous rows and ignores overlapping refreshes', () => {
     respondLive();
-    liveRegion().querySelector('button')!.click();
+    liveButton().click();
     fixture.detectChanges();
     fixture.componentInstance.refreshLive();
     expect(api.getLiveCommits).toHaveBeenCalledTimes(2);
-    expect(liveRegion().querySelector('button')!.disabled).toBe(true);
-    expect(liveRegion().querySelectorAll('tbody tr')).toHaveLength(MOCK_COMMITS.length);
+    expect(liveButton().disabled).toBe(true);
+    expect(liveRegion().querySelectorAll('kendo-grid .k-grid-content tbody tr')).toHaveLength(
+      MOCK_COMMITS.length,
+    );
     respondLive([{ ...MOCK_COMMITS[0], message: 'A newly refreshed commit' }]);
     expect(liveRegion().getAttribute('aria-busy')).toBe('false');
     expect(liveRegion().textContent).toContain('A newly refreshed commit');
-    expect(liveRegion().querySelectorAll('tbody tr')).toHaveLength(1);
+    expect(liveRegion().querySelectorAll('kendo-grid .k-grid-content tbody tr')).toHaveLength(1);
     expect(api.getScheduledCommits).toHaveBeenCalledOnce();
   });
 
   it('refreshes the scheduled snapshot independently and prevents duplicate requests', () => {
     respondScheduled();
-    scheduledRegion().querySelector('button')!.click();
+    scheduledButton().click();
     fixture.detectChanges();
     fixture.componentInstance.refreshScheduled();
     expect(api.getScheduledCommits).toHaveBeenCalledTimes(2);
@@ -184,25 +219,28 @@ describe('GithubMonitor', () => {
     liveRequests[0].error(new Error('Live service unavailable.'));
     fixture.detectChanges();
     expect(liveRegion().getAttribute('aria-busy')).toBe('false');
-    expect(liveRegion().querySelector('button')!.disabled).toBe(false);
+    expect(liveButton().disabled).toBe(false);
     expect(liveRegion().textContent).toContain('Commits unavailable');
     expect(liveRegion().textContent).not.toContain('No live commits available.');
-    expect(fixture.nativeElement.querySelector('[role="alertdialog"]').textContent).toContain(
+    expect(fixture.nativeElement.querySelector('[role="dialog"]').textContent).toContain(
       'Live service unavailable.',
     );
-    fixture.nativeElement.querySelector('dialog button').click();
+    fixture.nativeElement.querySelector('app-error-dialog .close-button').click();
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('dialog')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.activeElement).toBe(liveButton());
     expect(liveRegion().textContent).toContain('Live request failed.');
-    liveRegion().querySelector('button')!.click();
+    liveButton().click();
     respondLive();
     expect(fixture.componentInstance.liveError()).toBeNull();
-    expect(liveRegion().querySelectorAll('tbody tr')).toHaveLength(MOCK_COMMITS.length);
+    expect(liveRegion().querySelectorAll('kendo-grid .k-grid-content tbody tr')).toHaveLength(
+      MOCK_COMMITS.length,
+    );
   });
 
   it('preserves the last successful snapshot and sync time on scheduled failure', () => {
     respondScheduled();
-    scheduledRegion().querySelector('button')!.click();
+    scheduledButton().click();
     scheduledRequests[1].error(new Error('Snapshot service unavailable.'));
     fixture.detectChanges();
     expect(scheduledRegion().getAttribute('aria-busy')).toBe('false');
@@ -210,10 +248,13 @@ describe('GithubMonitor', () => {
     expect(scheduledRegion().querySelectorAll('tbody tr')).toHaveLength(MOCK_COMMITS.length);
     expect(fixture.componentInstance.lastSyncTime()).toBe(MOCK_LAST_SYNC_TIME);
     fixture.nativeElement
-      .querySelector('dialog')
-      .dispatchEvent(new Event('cancel', { cancelable: true }));
+      .querySelector('app-error-dialog .close-button')
+      .dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }),
+      );
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('dialog')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.activeElement).toBe(scheduledButton());
   });
 
   it('handles initial scheduled failure independently from live success', () => {
@@ -222,7 +263,30 @@ describe('GithubMonitor', () => {
     fixture.detectChanges();
     expect(fixture.componentInstance.loadingScheduled()).toBe(false);
     expect(scheduledRegion().textContent).toContain('Synchronization status unavailable.');
-    expect(liveRegion().querySelectorAll('tbody tr')).toHaveLength(MOCK_COMMITS.length);
+    expect(liveRegion().querySelectorAll('kendo-grid .k-grid-content tbody tr')).toHaveLength(
+      MOCK_COMMITS.length,
+    );
+  });
+
+  it('restores the latest refresh trigger when a second failure updates the open dialog', () => {
+    respondLive();
+    respondScheduled();
+    liveButton().click();
+    scheduledButton().click();
+
+    liveRequests[1].error(new Error('Live request failed.'));
+    fixture.detectChanges();
+    const dialog = fixture.nativeElement.querySelector('[role="dialog"]');
+    scheduledRequests[1].error(new Error('Scheduled request failed.'));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[role="dialog"]')).toBe(dialog);
+    expect(dialog.textContent).toContain('Scheduled request failed.');
+    fixture.nativeElement.querySelector('app-error-dialog .close-button').click();
+    fixture.detectChanges();
+
+    expect(document.activeElement).toBe(scheduledButton());
+    expect(fixture.nativeElement.querySelector('[role="dialog"]')).toBeNull();
   });
 
   it('supports providers that fail synchronously during initialization', () => {
@@ -231,7 +295,7 @@ describe('GithubMonitor', () => {
     fixture = TestBed.createComponent(GithubMonitor);
     fixture.detectChanges();
     expect(fixture.componentInstance.loadingLive()).toBe(false);
-    expect(fixture.nativeElement.querySelector('[role="alertdialog"]').textContent).toContain(
+    expect(fixture.nativeElement.querySelector('[role="dialog"]').textContent).toContain(
       'Immediate failure.',
     );
   });

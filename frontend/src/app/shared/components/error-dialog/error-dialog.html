@@ -1,20 +1,32 @@
-<dialog
-  #dialog
-  class="dialog-card"
-  role="alertdialog"
-  aria-modal="true"
-  [attr.aria-labelledby]="titleId"
-  [attr.aria-describedby]="descriptionId"
-  (cancel)="onCancel($event)"
-  (keydown)="onKeydown($event)"
->
-  <div class="dialog-icon" aria-hidden="true">!</div>
+@if (isOpen()) {
+  <kendo-dialog
+    #dialog
+    class="error-dialog"
+    width="min(440px, calc(100vw - 32px))"
+    maxHeight="calc(100dvh - 32px)"
+    [minWidth]="0"
+    [animation]="false"
+    autoFocusedElement=".close-button"
+    (close)="close()"
+  >
+    <kendo-dialog-titlebar>
+      <h2 [id]="titleId">Something went wrong</h2>
+    </kendo-dialog-titlebar>
 
-  <h2 [id]="titleId">Something went wrong</h2>
+    <div class="dialog-icon" aria-hidden="true">!</div>
+    <p [id]="descriptionId">{{ message() }}</p>
 
-  <p [id]="descriptionId">{{ message() }}</p>
-
-  <div class="dialog-actions">
-    <button #closeButton type="button" (click)="close()" autofocus>Close</button>
-  </div>
-</dialog>
+    <kendo-dialog-actions layout="end">
+      <button
+        #closeButton
+        kendoButton
+        class="close-button"
+        themeColor="primary"
+        type="button"
+        (click)="close()"
+      >
+        Close
+      </button>
+    </kendo-dialog-actions>
+  </kendo-dialog>
+}

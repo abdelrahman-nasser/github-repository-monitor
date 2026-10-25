@@ -1,3 +1,60 @@
+// Load only the components in use and their supported theme dependencies.
+@use '@progress/kendo-theme-default/scss/core/index.scss' with (
+  $kendo-colors: (
+    primary: #2457c5,
+    primary-hover: #1847ab,
+    primary-active: #123b94,
+    on-primary: #fff,
+  )
+);
+@use '@progress/kendo-theme-default/scss/grid/index.scss' as grid;
+@use '@progress/kendo-theme-default/scss/dialog/index.scss' as dialog;
+@use '@progress/kendo-theme-default/scss/button/index.scss' as button;
+
+@include grid.kendo-grid--styles();
+@include dialog.kendo-dialog--styles();
+@include button.kendo-button--styles();
+
+// Kendo owns these inner elements; keep dashboard customizations scoped to this dialog.
+.error-dialog {
+  .k-dialog {
+    border: 1px solid #d9e2ef;
+    border-radius: 16px;
+    box-shadow: 0 24px 80px rgb(0 0 0 / 20%);
+  }
+
+  .k-overlay {
+    background: rgb(15 23 42 / 60%);
+    opacity: 1;
+    backdrop-filter: blur(3px);
+  }
+
+  .k-dialog-titlebar {
+    padding: 24px 28px 18px;
+    border: 0;
+    background: #fff;
+    color: #17243b;
+  }
+
+  .k-dialog-title {
+    white-space: normal;
+  }
+
+  .k-dialog-titlebar-action {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .k-dialog-content {
+    padding: 0 28px 24px;
+  }
+
+  .k-dialog-actions {
+    padding: 0 28px 24px;
+    border: 0;
+  }
+}
+
 * {
   box-sizing: border-box;
 }

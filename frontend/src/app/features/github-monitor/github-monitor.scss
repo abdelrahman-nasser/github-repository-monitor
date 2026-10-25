@@ -175,38 +175,34 @@ p {
     11px ui-monospace,
     monospace;
 }
-.refresh-button {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
+.refresh-button.k-button {
   flex-shrink: 0;
-  border: 1px solid #2457c5;
+  min-height: 44px;
   border-radius: 7px;
-  background: #2457c5;
-  color: white;
   font-size: 12px;
   font-weight: 600;
   padding: 10px 15px;
-  cursor: pointer;
 }
-.refresh-button:hover:not(:disabled) {
-  background: #1847ab;
-}
-.refresh-button:disabled {
+.refresh-button.k-button:disabled {
   opacity: 0.65;
   cursor: wait;
 }
-.refresh-button span {
+.refresh-button.k-button:focus-visible {
+  outline: 3px solid #2457c5;
+  outline-offset: 3px;
+}
+.refresh-button span[aria-hidden='true'] {
+  margin-inline-end: 8px;
   font-size: 18px;
   line-height: 1;
+  vertical-align: middle;
 }
-.secondary {
+.refresh-button.secondary {
   background: #fff;
   color: #34527e;
   border-color: #ced8e7;
 }
-.secondary:hover:not(:disabled) {
+.refresh-button.secondary:hover:not(:disabled) {
   background: #edf3ff;
 }
 .sync-info {

@@ -10,6 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ButtonDirective } from '@progress/kendo-angular-buttons';
 import { finalize } from 'rxjs';
 
 import { GithubApiService } from '../../core/services/github-api.service';
@@ -19,7 +20,7 @@ import { CommitTable } from './components/commit-table/commit-table';
 
 @Component({
   selector: 'app-github-monitor',
-  imports: [DatePipe, ErrorDialog, CommitTable],
+  imports: [DatePipe, ButtonDirective, ErrorDialog, CommitTable],
   templateUrl: './github-monitor.html',
   styleUrl: './github-monitor.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -27,8 +28,13 @@ import { CommitTable } from './components/commit-table/commit-table';
 export class GithubMonitor implements OnInit {
   private readonly api = inject(GithubApiService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly liveRefresh = viewChild<ElementRef<HTMLButtonElement>>('liveRefresh');
-  private readonly scheduledRefresh = viewChild<ElementRef<HTMLButtonElement>>('scheduledRefresh');
+  private readonly liveRefresh = viewChild<unknown, ElementRef<HTMLButtonElement>>('liveRefresh', {
+    read: ElementRef,
+  });
+  private readonly scheduledRefresh = viewChild<unknown, ElementRef<HTMLButtonElement>>(
+    'scheduledRefresh',
+    { read: ElementRef },
+  );
   readonly isMock = this.api.mode === 'mock';
   readonly liveCommits = signal<GitCommit[]>([]);
   readonly scheduledCommits = signal<GitCommit[]>([]);

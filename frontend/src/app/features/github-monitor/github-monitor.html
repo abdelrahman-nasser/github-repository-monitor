@@ -84,6 +84,8 @@
       </div>
       <button
         #liveRefresh
+        kendoButton
+        themeColor="primary"
         class="refresh-button"
         type="button"
         (click)="refreshLive()"
@@ -140,6 +142,7 @@
       </div>
       <button
         #scheduledRefresh
+        kendoButton
         class="refresh-button secondary"
         type="button"
         (click)="refreshScheduled()"
@@ -200,9 +203,7 @@
 
   <footer class="page-footer">
     <span>GitHub Repository Monitor</span
-    ><span>{{
-      isMock ? 'Native Angular preview · Sample data' : 'Native Angular · Repository activity'
-    }}</span>
+    ><span>{{ isMock ? 'Kendo UI preview · Sample data' : 'Kendo UI · Repository activity' }}</span>
   </footer>
 </main>
 
