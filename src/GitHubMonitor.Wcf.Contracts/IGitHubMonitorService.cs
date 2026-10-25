@@ -11,4 +11,7 @@ public interface IGitHubMonitorService
 
     [OperationContract(Name = "GetLiveCommits")]
     Task<GitCommitDto[]> GetLiveCommitsAsync();
+
+    [OperationContract(Name = "GetScheduledCommits")]
+    Task<ScheduledCommitsDto> GetScheduledCommitsAsync();
 }

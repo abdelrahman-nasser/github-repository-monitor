@@ -19,4 +19,10 @@ public interface IGitHubMonitorSoapClient
         Action = "http://tempuri.org/IGitHubMonitorService/GetLiveCommits",
         ReplyAction = "*")]
     Task<GitCommitDto[]> GetLiveCommitsAsync();
+
+    [OperationContract(
+        Name = "GetScheduledCommits",
+        Action = "http://tempuri.org/IGitHubMonitorService/GetScheduledCommits",
+        ReplyAction = "*")]
+    Task<ScheduledCommitsDto> GetScheduledCommitsAsync();
 }

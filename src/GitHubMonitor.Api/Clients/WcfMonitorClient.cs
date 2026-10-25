@@ -30,6 +30,14 @@ public sealed class WcfMonitorClient : IWcfMonitorClient
             cancellationToken);
     }
 
+    public Task<ScheduledCommitsDto> GetScheduledCommitsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(
+            client => client.GetScheduledCommitsAsync(),
+            cancellationToken);
+    }
+
     private async Task<T> ExecuteAsync<T>(
         Func<IGitHubMonitorSoapClient, Task<T>> operation,
         CancellationToken cancellationToken)

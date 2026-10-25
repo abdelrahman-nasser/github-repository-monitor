@@ -26,4 +26,4 @@ jobs:
         run: dotnet build GitHubRepositoryMonitor.sln --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test tests/GitHubMonitor.Infrastructure.Tests --configuration Release --no-build
+        run: dotnet test GitHubRepositoryMonitor.sln --configuration Release --no-build --no-restore

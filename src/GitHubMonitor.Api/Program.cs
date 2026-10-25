@@ -52,4 +52,22 @@ app.MapGet("/api/github/live",
     .WithName("GetLiveGitHubCommits")
     .WithOpenApi();
 
+
+// Retrieve scheduled commits from the WCF cache
+app.MapGet("/api/github/scheduled",
+    async (IWcfMonitorClient client, CancellationToken cancellationToken) =>
+    {
+        var snapshot = await client.GetScheduledCommitsAsync(
+            cancellationToken);
+
+        return Results.Ok(new
+        {
+            success = true,
+            message = "Scheduled commits retrieved successfully.",
+            data = snapshot
+        });
+    })
+    .WithName("GetScheduledGitHubCommits")
+    .WithOpenApi();
+
 app.Run();

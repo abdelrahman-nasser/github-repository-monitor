@@ -1,6 +1,7 @@
 using CoreWCF;
 using CoreWCF.Configuration;
 using CoreWCF.Description;
+using GitHubMonitor.Application.Abstractions;
 using GitHubMonitor.Application.UseCases;
 using GitHubMonitor.Wcf.Contracts;
 using GitHubMonitor.Wcf.Host.Extensions;
@@ -60,6 +61,19 @@ if (app.Environment.IsDevelopment())
             {
                 count = commits.Count,
                 commits
+            });
+        });
+
+    // Inspect the scheduled cache during development
+    app.MapGet("/diagnostics/scheduled",
+        (IScheduledCommitsStore store) =>
+        {
+            var snapshot = store.GetSnapshot();
+
+            return Results.Ok(new
+            {
+                count = snapshot.Commits.Count,
+                lastSyncTime = snapshot.LastSyncTime
             });
         });
 }

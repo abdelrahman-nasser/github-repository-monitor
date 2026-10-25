@@ -9,4 +9,7 @@ public interface IWcfMonitorClient
 
     Task<GitCommitDto[]> GetLiveCommitsAsync(
         CancellationToken cancellationToken = default);
+
+    Task<ScheduledCommitsDto> GetScheduledCommitsAsync(
+        CancellationToken cancellationToken = default);
 }
