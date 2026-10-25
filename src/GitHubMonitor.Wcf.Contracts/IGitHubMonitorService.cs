@@ -1,4 +1,5 @@
 using CoreWCF;
+using GitHubMonitor.Wcf.Contracts.Models;
 
 namespace GitHubMonitor.Wcf.Contracts;
 
@@ -7,4 +8,7 @@ public interface IGitHubMonitorService
 {
     [OperationContract]
     string Ping();
+
+    [OperationContract(Name = "GetLiveCommits")]
+    Task<GitCommitDto[]> GetLiveCommitsAsync();
 }
