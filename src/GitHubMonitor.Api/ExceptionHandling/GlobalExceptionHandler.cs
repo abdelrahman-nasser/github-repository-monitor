@@ -1,4 +1,5 @@
 using System.ServiceModel;
+using GitHubMonitor.Api.Models;
 using Microsoft.AspNetCore.Diagnostics;
 
 namespace GitHubMonitor.Api.ExceptionHandling;
@@ -39,12 +40,10 @@ public sealed class GlobalExceptionHandler(
         context.Response.StatusCode = statusCode;
 
         await context.Response.WriteAsJsonAsync(
-            new
-            {
-                success = false,
-                message,
-                data = (object?)null
-            },
+            new ApiResponse<object?>(
+                Success: false,
+                Message: message,
+                Data: null),
             cancellationToken);
 
         return true;

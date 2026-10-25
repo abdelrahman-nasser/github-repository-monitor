@@ -34,6 +34,9 @@ public static class ServiceCollectionExtensions
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddProblemDetails();
 
+        // MVC controllers
+        services.AddControllers();
+
         return services;
     }
 }

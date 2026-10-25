@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GitHubMonitor.Infrastructur
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GitHubMonitor.Wcf.Host.Tests", "tests\GitHubMonitor.Wcf.Host.Tests\GitHubMonitor.Wcf.Host.Tests.csproj", "{BC974AC1-285A-44DE-82BA-E73D4581B8BC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GitHubMonitor.Api.Tests", "tests\GitHubMonitor.Api.Tests\GitHubMonitor.Api.Tests.csproj", "{A88CF26C-2259-4BDF-B054-F3E96BD32561}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -129,6 +131,18 @@ Global
 		{BC974AC1-285A-44DE-82BA-E73D4581B8BC}.Release|x64.Build.0 = Release|Any CPU
 		{BC974AC1-285A-44DE-82BA-E73D4581B8BC}.Release|x86.ActiveCfg = Release|Any CPU
 		{BC974AC1-285A-44DE-82BA-E73D4581B8BC}.Release|x86.Build.0 = Release|Any CPU
+		{A88CF26C-2259-4BDF-B054-F3E96BD32561}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A88CF26C-2259-4BDF-B054-F3E96BD32561}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A88CF26C-2259-4BDF-B054-F3E96BD32561}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A88CF26C-2259-4BDF-B054-F3E96BD32561}.Debug|x64.Build.0 = Debug|Any CPU
+		{A88CF26C-2259-4BDF-B054-F3E96BD32561}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A88CF26C-2259-4BDF-B054-F3E96BD32561}.Debug|x86.Build.0 = Debug|Any CPU
+		{A88CF26C-2259-4BDF-B054-F3E96BD32561}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A88CF26C-2259-4BDF-B054-F3E96BD32561}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A88CF26C-2259-4BDF-B054-F3E96BD32561}.Release|x64.ActiveCfg = Release|Any CPU
+		{A88CF26C-2259-4BDF-B054-F3E96BD32561}.Release|x64.Build.0 = Release|Any CPU
+		{A88CF26C-2259-4BDF-B054-F3E96BD32561}.Release|x86.ActiveCfg = Release|Any CPU
+		{A88CF26C-2259-4BDF-B054-F3E96BD32561}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -142,5 +156,6 @@ Global
 		{5F4ADC11-A9DD-4CF4-97F9-5E47136BC354} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{A0F56878-B3E9-4646-B16E-530D9C3D48D7} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{BC974AC1-285A-44DE-82BA-E73D4581B8BC} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{A88CF26C-2259-4BDF-B054-F3E96BD32561} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal
