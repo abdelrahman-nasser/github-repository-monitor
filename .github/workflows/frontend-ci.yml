@@ -52,4 +52,4 @@ jobs:
         run: npx prettier . --check
 
       - name: Verify workflow formatting
-        run: npx prettier ../.github/workflows/frontend-ci.yml --check
+        run: npx prettier ../.github/workflows/frontend-ci.yml --check --end-of-line lf
